@@ -1,26 +1,40 @@
 // Admin — Customers management page
 
-const CUSTOMERS = [
-  {id:'C-2026-0418', n:'Nur Aisyah Rahman',     ic:'990408-14-5238', ph:'+60 12-345 6789', em:'aisyah.r@gmail.com',    city:'Petaling Jaya, Selangor', joined:'Aug 2023', last:'2 days ago',  bookings:12, spent:18420, status:'VIP',      tier:'Gold'},
-  {id:'C-2026-0417', n:'Daniel Lee',            ic:'870921-08-5172', ph:'+60 16-742 1109', em:'daniel.lee@outlook.com',city:'Subang Jaya, Selangor',   joined:'Jan 2022', last:'1 week ago',  bookings:8,  spent:14260, status:'Active',   tier:'Silver'},
-  {id:'C-2026-0416', n:'Siti Khadijah',         ic:'940522-12-6634', ph:'+60 19-228 4012', em:'sitikj@yahoo.com',      city:'Johor Bahru, Johor',      joined:'Mar 2023', last:'3 days ago',  bookings:6,  spent:21340, status:'VIP',      tier:'Gold'},
-  {id:'C-2026-0415', n:'Muhammad Amir',         ic:'910311-05-7281', ph:'+60 13-991 8842', em:'amir.m91@gmail.com',    city:'George Town, Penang',     joined:'Nov 2021', last:'1 month ago', bookings:14, spent:24800, status:'VIP',      tier:'Platinum'},
-  {id:'C-2026-0414', n:'Ahmad Firdaus',         ic:'880715-14-5511', ph:'+60 17-562 0934', em:'firdaus.ahmad@gmail.com',city:'Shah Alam, Selangor',    joined:'Jun 2020', last:'5 days ago',  bookings:18, spent:32160, status:'VIP',      tier:'Platinum'},
-  {id:'C-2026-0413', n:'Lim Wei Ling',          ic:'960428-07-8923', ph:'+60 12-883 4471', em:'weiling.lim@gmail.com', city:'Ipoh, Perak',             joined:'Feb 2024', last:'2 weeks ago', bookings:3,  spent:4280,  status:'Active',   tier:'Bronze'},
-  {id:'C-2026-0412', n:'Tengku Iskandar',       ic:'900919-03-6612', ph:'+60 11-1928 5523',em:'tiskandar@kl.gov.my',   city:'Kuala Lumpur',            joined:'Oct 2024', last:'Today',       bookings:2,  spent:7240,  status:'New',      tier:'Bronze'},
-  {id:'C-2026-0411', n:'Vanitha Subramaniam',   ic:'940204-10-4438', ph:'+60 14-228 7710', em:'vanitha.s@gmail.com',   city:'Klang, Selangor',         joined:'May 2023', last:'4 days ago',  bookings:5,  spent:6480,  status:'Active',   tier:'Silver'},
-  {id:'C-2026-0410', n:'Wong Mei Ling',         ic:'920708-08-3329', ph:'+60 12-661 4488', em:'meiling.w@outlook.com', city:'Melaka',                  joined:'Jul 2024', last:'1 week ago',  bookings:4,  spent:5920,  status:'Active',   tier:'Bronze'},
-  {id:'C-2026-0409', n:'Raj Kumar',             ic:'891003-14-7123', ph:'+60 19-455 8821', em:'raj.kumar89@gmail.com', city:'Petaling Jaya, Selangor', joined:'Sep 2022', last:'6 days ago',  bookings:9,  spent:13580, status:'Active',   tier:'Silver'},
-  {id:'C-2026-0408', n:'Nor Hafizah Yusof',     ic:'970212-03-2256', ph:'+60 13-554 9923', em:'hafizah.y@gmail.com',   city:'Kota Bharu, Kelantan',    joined:'Dec 2024', last:'2 months ago',bookings:1,  spent:1840,  status:'Inactive', tier:'Bronze'},
-  {id:'C-2026-0407', n:'Chua Boon Hock',        ic:'850618-10-7741', ph:'+60 16-882 3300', em:'bh.chua@gmail.com',     city:'Kota Kinabalu, Sabah',    joined:'Apr 2021', last:'3 weeks ago', bookings:11, spent:19420, status:'Active',   tier:'Gold'},
-];
+function useCustomers() {
+  const [data, setData]       = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  React.useEffect(() => {
+    fetch('/api/customers.php')
+      .then(r => r.json())
+      .then(rows => {
+        if (Array.isArray(rows)) {
+          setData(rows.map(c => ({
+            ...c,
+            n:        `${c.first_name} ${c.last_name}`,
+            ic:       c.ic,
+            ph:       c.phone || '—',
+            em:       c.email,
+            city:     c.city || '—',
+            joined:   c.created_at ? new Date(c.created_at).toLocaleDateString('en-MY', {month:'short', year:'numeric'}) : '—',
+            last:     c.last_booking ? new Date(c.last_booking).toLocaleDateString('en-MY', {day:'2-digit',month:'short',year:'numeric'}) : 'Never',
+            bookings: c.booking_count,
+            spent:    c.total_spent,
+          })));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+  return { data, loading };
+}
 
 function AdminCustomers(){
   const [q, setQ] = React.useState('');
   const [seg, setSeg] = React.useState('All');
   const [tier, setTier] = React.useState('All');
-  const [sel, setSel] = React.useState(null);   // currently-opened customer
+  const [sel, setSel] = React.useState(null);
   const [sort, setSort] = React.useState('Recent');
+  const { data: CUSTOMERS, loading } = useCustomers();
 
   const segments = [
     {l:'All',      f:c=>true},
@@ -324,4 +338,4 @@ function Detail({ic, l, v, mono}){
   );
 }
 
-Object.assign(window, { AdminCustomers });
+Object.assign(window, { AdminCustomers, useCustomers });
