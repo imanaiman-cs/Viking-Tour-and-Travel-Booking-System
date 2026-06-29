@@ -1,9 +1,11 @@
 <?php
-// Database configuration — edit these to match your XAMPP/MySQL setup
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'viking_travel');
-define('DB_USER', 'root');
-define('DB_PASS', '');          // XAMPP default has no password
+// ── Database configuration ────────────────────────────────────────
+// InfinityFree: get these values from your control panel → MySQL Databases
+// XAMPP local:  host=localhost, user=root, pass='', name=viking_travel
+define('DB_HOST', 'sql102.infinityfree.com');
+define('DB_NAME', 'if0_42295459_viking_db');
+define('DB_USER', 'if0_42295459');
+define('DB_PASS', '7P7jNi7rc4RN');
 define('DB_CHARSET', 'utf8mb4');
 
 function getDB(): PDO {
