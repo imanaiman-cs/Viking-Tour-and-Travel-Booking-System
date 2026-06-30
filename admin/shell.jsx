@@ -1,24 +1,6 @@
 // Admin shell — sidebar, topbar, layout
 
-function useAdminUser() {
-  const [user, setUser] = React.useState(window.__vikingUser || null);
-  React.useEffect(() => {
-    if (window.__vikingUser) { setUser(window.__vikingUser); return; }
-    fetch('/api/auth.php')
-      .then(r => r.json())
-      .then(d => {
-        if (d.loggedIn && d.user) {
-          window.__vikingUser = d.user;
-          setUser(d.user);
-        }
-      })
-      .catch(() => {});
-  }, []);
-  return user;
-}
-
 function AdminShell({active, title, subtitle, children, breadcrumb}){
-  const user = useAdminUser();
   const [openBell, setOpenBell] = React.useState(false);
   const [openUser, setOpenUser] = React.useState(false);
   React.useEffect(()=>{
@@ -29,7 +11,7 @@ function AdminShell({active, title, subtitle, children, breadcrumb}){
 
   return (
     <div style={{display:'grid', gridTemplateColumns:'248px 1fr', minHeight:'100vh', background:'var(--paper)'}} data-screen-label={`Admin · ${active}`}>
-      <Sidebar active={active} user={user}/>
+      <Sidebar active={active}/>
       <div style={{display:'flex', flexDirection:'column'}}>
         <header style={{
           position:'sticky', top:0, zIndex:30,
@@ -65,16 +47,14 @@ function AdminShell({active, title, subtitle, children, breadcrumb}){
           <div style={{position:'relative'}} data-pop>
             <button onClick={(e)=>{e.stopPropagation(); setOpenUser(v=>!v); setOpenBell(false);}}
               style={{display:'flex', alignItems:'center', gap:10, padding:'5px 10px 5px 5px', borderRadius:99, background:'#fff', border:'1px solid var(--line)', cursor:'pointer', fontFamily:'inherit'}}>
-              <span style={{width:32, height:32, borderRadius:99, background:'linear-gradient(135deg, var(--navy-700), var(--blue-500))', color:'#fff', display:'grid', placeItems:'center', fontSize:12, fontWeight:600}}>
-                {user ? user.name.split(' ').map(x=>x[0]).slice(0,2).join('') : 'A'}
-              </span>
+              <span style={{width:32, height:32, borderRadius:99, background:'linear-gradient(135deg, var(--navy-700), var(--blue-500))', color:'#fff', display:'grid', placeItems:'center', fontSize:12, fontWeight:600}}>AF</span>
               <div style={{textAlign:'left', lineHeight:1.15}}>
-                <div style={{fontSize:13, fontWeight:600}}>{user?.name || 'Admin'}</div>
-                <div style={{fontSize:11, color:'var(--ink-400)'}}>{user?.role || 'Admin'}</div>
+                <div style={{fontSize:13, fontWeight:600}}>Ahmad Firdaus</div>
+                <div style={{fontSize:11, color:'var(--ink-400)'}}>Super Admin</div>
               </div>
               <Icon name="chev" size={14} color="var(--ink-400)"/>
             </button>
-            {openUser && <UserPopover user={user}/>}
+            {openUser && <UserPopover/>}
           </div>
         </header>
 
@@ -87,7 +67,7 @@ function AdminShell({active, title, subtitle, children, breadcrumb}){
   );
 }
 
-function Sidebar({active, user}){
+function Sidebar({active}){
   const groups = [
     {l:'Overview', items:[
       {id:'dashboard', label:'Dashboard',     ic:'home',  to:'#/dashboard'},
@@ -141,17 +121,12 @@ function Sidebar({active, user}){
 
       <div style={{marginTop:'auto', padding:'14px', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.06)', borderRadius:12}}>
         <div style={{display:'flex', alignItems:'center', gap:10}}>
-          <span style={{width:34, height:34, borderRadius:99, background:'linear-gradient(135deg, var(--blue-500), var(--blue-600))', color:'#fff', display:'grid', placeItems:'center', fontSize:12, fontWeight:600}}>
-            {user ? user.name.split(' ').map(x=>x[0]).slice(0,2).join('') : 'A'}
-          </span>
+          <span style={{width:34, height:34, borderRadius:99, background:'linear-gradient(135deg, var(--blue-500), var(--blue-600))', color:'#fff', display:'grid', placeItems:'center', fontSize:12, fontWeight:600}}>AF</span>
           <div style={{flex:1, lineHeight:1.2}}>
-            <div style={{fontSize:13, fontWeight:600}}>{user?.name || 'Admin'}</div>
-            <div style={{fontSize:11, color:'rgba(255,255,255,.5)'}}>{user?.email || ''}</div>
+            <div style={{fontSize:13, fontWeight:600}}>Ahmad Firdaus</div>
+            <div style={{fontSize:11, color:'rgba(255,255,255,.5)'}}>admin@vikingtour.com.my</div>
           </div>
-          <button style={{background:'none', border:0, color:'rgba(255,255,255,.6)', cursor:'pointer'}} onClick={()=>{
-            fetch('/api/auth.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'logout'})})
-              .finally(()=>{ window.__vikingUser=null; window.location.href='auth.php#admin'; });
-          }}><Icon name="logout" size={16}/></button>
+          <button style={{background:'none', border:0, color:'rgba(255,255,255,.6)', cursor:'pointer'}} onClick={()=>window.location.href='auth.php#admin'}><Icon name="logout" size={16}/></button>
         </div>
       </div>
     </aside>
@@ -196,7 +171,7 @@ function AdminBell(){
   );
 }
 
-function UserPopover({ user }){
+function UserPopover(){
   return (
     <div style={{position:'absolute', top:'calc(100% + 10px)', right:0, width:240, background:'#fff', border:'1px solid var(--line)', borderRadius:12, boxShadow:'var(--sh-3)', padding:6, zIndex:60}}>
       {[
@@ -212,10 +187,7 @@ function UserPopover({ user }){
         </button>
       ))}
       <div style={{height:1, background:'var(--line-2)', margin:'4px 4px'}}/>
-      <button onClick={()=>{
-        fetch('/api/auth.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'logout'})})
-          .finally(()=>{ window.__vikingUser=null; window.location.href='auth.php#admin'; });
-      }} style={{display:'flex', alignItems:'center', gap:10, padding:'9px 12px', width:'100%', background:'transparent', border:0, borderRadius:7, cursor:'pointer', textAlign:'left', fontSize:13, fontFamily:'inherit', color:'var(--coral)'}}>
+      <button style={{display:'flex', alignItems:'center', gap:10, padding:'9px 12px', width:'100%', background:'transparent', border:0, borderRadius:7, cursor:'pointer', textAlign:'left', fontSize:13, fontFamily:'inherit', color:'var(--coral)'}}>
         <Icon name="logout" size={15}/> Log out
       </button>
     </div>

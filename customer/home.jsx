@@ -1,28 +1,13 @@
 // Customer home page
 
-function usePackages() {
-  const [packages, setPackages] = React.useState([]);
-  React.useEffect(() => {
-    fetch('/api/packages.php')
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setPackages(data.map(p => ({
-            ...p,
-            loc: p.location,
-            days: `${p.days} days ${p.nights} nights`,
-            was: p.original_price,
-            img: p.img_class,
-          })));
-        }
-      })
-      .catch(() => {});
-  }, []);
-  return packages;
-}
-
-// Kept as fallback for PackageCard usage from packages.jsx
-const PACKAGES = [];
+const PACKAGES = [
+  {id:'lk-001', name:'Langkawi Island Escape',     loc:'Langkawi, Kedah',  days:'4 days 3 nights', price:1280, was:1490, rating:4.9, reviews:284, badge:'Bestseller', img:'ph-langkawi', tag:'Beaches'},
+  {id:'sb-014', name:'Kundasang Highland Retreat', loc:'Sabah, East Malaysia', days:'5 days 4 nights', price:2160, was:2480, rating:4.8, reviews:192, badge:'New',      img:'ph-kundasang', tag:'Mountains'},
+  {id:'ch-022', name:'Cameron Tea Country Tour',   loc:'Pahang Highlands', days:'3 days 2 nights', price:890,  was:1050, rating:4.7, reviews:341, badge:'Limited',  img:'ph-cameron', tag:'Highlands'},
+  {id:'pr-008', name:'Pulau Redang Marine Park',   loc:'Terengganu',       days:'4 days 3 nights', price:1640, was:1840, rating:4.9, reviews:218, badge:'',         img:'ph-redang', tag:'Diving'},
+  {id:'pn-019', name:'Penang Heritage & Food',     loc:'George Town',      days:'3 days 2 nights', price:720,  was:880,  rating:4.8, reviews:512, badge:'Trending', img:'ph-penang', tag:'Culture'},
+  {id:'ml-007', name:'Melaka Strait Heritage',     loc:'Melaka',           days:'2 days 1 night',  price:480,  was:560,  rating:4.6, reviews:267, badge:'',         img:'ph-melaka', tag:'Heritage'},
+];
 
 function Home(){
   return (
@@ -285,13 +270,6 @@ function PromoBanner(){
 }
 
 function PopularPackages(){
-  const [activeTag, setActiveTag] = React.useState('All');
-  const allPackages = usePackages();
-  const tags = ['All','Beaches','Mountains','Heritage','Diving','Highlands','Culture'];
-  const filtered = activeTag === 'All'
-    ? allPackages.slice(0, 6)
-    : allPackages.filter(p => p.tag === activeTag).slice(0, 6);
-
   return (
     <section style={{maxWidth:1320, margin:'120px auto 0', padding:'0 32px'}}>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'end', marginBottom:32}}>
@@ -301,42 +279,22 @@ function PopularPackages(){
             What other Malaysians<br/>are booking this month.
           </h2>
         </div>
-        <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
-          {tags.map((t,i)=>(
-            <button key={t} onClick={()=>setActiveTag(t)} style={{
+        <div style={{display:'flex', gap:8}}>
+          {['All','Beach','Mountain','Heritage','Diving'].map((t,i)=>(
+            <button key={t} style={{
               padding:'8px 14px', borderRadius:99,
               fontSize:13, fontWeight:500, cursor:'pointer',
-              background: activeTag===t ? 'var(--navy-800)' : '#fff',
-              color: activeTag===t ? '#fff' : 'var(--ink-700)',
-              border:'1px solid ' + (activeTag===t ? 'var(--navy-800)' : 'var(--line)'),
+              background: i===0 ? 'var(--navy-800)' : '#fff',
+              color: i===0 ? '#fff' : 'var(--ink-700)',
+              border:'1px solid ' + (i===0 ? 'var(--navy-800)' : 'var(--line)'),
             }}>{t}</button>
           ))}
         </div>
       </div>
       <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:22}} className="pkg-grid">
-        {filtered.length > 0
-          ? filtered.map(p => <PackageCard key={p.id} pkg={p}/>)
-          : allPackages.length === 0
-            ? [1,2,3,4,5,6].map(i => <PackageSkeleton key={i}/>)
-            : <div style={{gridColumn:'1/-1', textAlign:'center', padding:40, color:'var(--ink-400)'}}>No packages in this category.</div>
-        }
+        {PACKAGES.slice(0,6).map(p => <PackageCard key={p.id} pkg={p}/>)}
       </div>
     </section>
-  );
-}
-
-function PackageSkeleton(){
-  return (
-    <div style={{background:'#fff', border:'1px solid var(--line)', borderRadius:18, overflow:'hidden'}}>
-      <div style={{height:220, background:'var(--cream)', animation:'pulse 1.5s infinite'}}/>
-      <div style={{padding:'20px 22px', display:'flex', flexDirection:'column', gap:10}}>
-        <div style={{height:12, width:'60%', background:'var(--cream)', borderRadius:6}}/>
-        <div style={{height:20, width:'85%', background:'var(--cream)', borderRadius:6}}/>
-        <div style={{height:12, width:'40%', background:'var(--cream)', borderRadius:6}}/>
-        <div style={{height:1, background:'var(--line)', margin:'4px 0'}}/>
-        <div style={{height:20, width:'50%', background:'var(--cream)', borderRadius:6}}/>
-      </div>
-    </div>
   );
 }
 
@@ -477,4 +435,4 @@ function Reviews(){
   );
 }
 
-Object.assign(window, { Home, PACKAGES, PackageCard, usePackages, PackageSkeleton });
+Object.assign(window, { Home, PACKAGES, PackageCard });

@@ -1,54 +1,32 @@
 // Admin — Dashboard page
 
-function useDashboard() {
-  const [dash, setDash]     = React.useState(null);
-  const [loading, setLoading] = React.useState(true);
-  React.useEffect(() => {
-    fetch('/api/dashboard.php')
-      .then(r => r.json())
-      .then(d => setDash(d))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-  return { dash, loading };
-}
-
 function AdminDashboard(){
-  const { dash, loading } = useDashboard();
-  const stats = dash?.stats;
-  const today = new Date().toLocaleDateString('en-MY', {day:'numeric', month:'long', year:'numeric'});
-  const adminName = window.__vikingUser?.name?.split(' ')[0] || 'Admin';
-
-  const revDelta = stats && stats.revenue_prev > 0
-    ? ((stats.revenue_mtd - stats.revenue_prev) / stats.revenue_prev * 100).toFixed(1)
-    : '—';
-
   return (
     <AdminShell active="dashboard"
-      breadcrumb={`OVERVIEW · ${today.toUpperCase()}`}
-      title={`Good morning, ${adminName}. Here's the week ahead.`}
-      subtitle={loading ? 'Loading data…' : `${stats?.bookings_mtd || 0} new bookings this month, RM ${(stats?.revenue_mtd||0).toLocaleString()} in revenue.`}>
+      breadcrumb="OVERVIEW · TODAY 21 MAY 2026"
+      title="Good morning, Ahmad. Here's the week ahead."
+      subtitle="12 new bookings overnight, RM 32,480 in revenue, and one refund needs your attention.">
 
       <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:16, marginBottom:24}}>
-        <Stat label="REVENUE (MTD)"    value={`RM ${(stats?.revenue_mtd||0).toLocaleString()}`}  delta={`${revDelta}%`}       trend="up" sub="vs last month"/>
-        <Stat label="BOOKINGS"          value={(stats?.bookings||0).toLocaleString()}              delta={`+${stats?.bookings_mtd||0}`} trend="up" sub="this month"/>
-        <Stat label="ACTIVE CUSTOMERS"  value={(stats?.customers||0).toLocaleString()}             delta="+new"                trend="up" sub="registered"/>
-        <Stat label="AVG. RATING"       value={(stats?.avg_rating||0).toFixed(2)}                 delta="+0.0"                trend="up" sub="of 5.00 stars"/>
+        <Stat label="REVENUE (MTD)"  value="RM 286,420" delta="+12.4%" trend="up" sub="vs last month"/>
+        <Stat label="BOOKINGS"        value="1,284"      delta="+8.2%"  trend="up" sub="487 this month"/>
+        <Stat label="ACTIVE CUSTOMERS" value="6,142"     delta="+3.1%"  trend="up" sub="3,802 returning"/>
+        <Stat label="AVG. RATING"     value="4.86"       delta="+0.04"  trend="up" sub="of 5.00 stars"/>
       </div>
 
       <div style={{display:'grid', gridTemplateColumns:'2fr 1fr', gap:16, marginBottom:24}}>
-        <RevenueChart data={dash?.monthly_revenue}/>
-        <UpcomingBookings items={dash?.upcoming_departures}/>
+        <RevenueChart/>
+        <UpcomingBookings/>
       </div>
 
       <div style={{display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:16, marginBottom:24}}>
         <CalendarCard/>
-        <TopPackages items={dash?.top_packages}/>
-        <ActivityFeed items={dash?.notifications}/>
+        <TopPackages/>
+        <ActivityFeed/>
       </div>
 
       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:16}}>
-        <BookingsTablePreview rows={dash?.recent_reservations}/>
+        <BookingsTablePreview/>
         <CustomerBreakdown/>
       </div>
     </AdminShell>
@@ -86,16 +64,14 @@ function Sparkline({up}){
   );
 }
 
-function RevenueChart({ data: apiData }){
-  const fallback = [
+function RevenueChart(){
+  // 12 months of fake-but-realistic revenue (RM '000)
+  const data = [
     {m:'Jun', r:148, b:62}, {m:'Jul', r:172, b:74}, {m:'Aug', r:218, b:92},
     {m:'Sep', r:186, b:80}, {m:'Oct', r:204, b:88}, {m:'Nov', r:232, b:96},
     {m:'Dec', r:294, b:124},{m:'Jan', r:248, b:104},{m:'Feb', r:212, b:90},
     {m:'Mar', r:236, b:98}, {m:'Apr', r:268, b:112},{m:'May', r:286, b:118},
   ];
-  const data = apiData && apiData.length > 0
-    ? apiData.map(d => ({ m: d.month, r: Math.round(d.revenue / 1000), b: d.bookings }))
-    : fallback;
   const max = Math.max(...data.map(d=>d.r));
   return (
     <div style={{padding:'22px 24px', background:'#fff', border:'1px solid var(--line)', borderRadius:16}}>
@@ -139,28 +115,21 @@ function RevenueChart({ data: apiData }){
   );
 }
 
-function UpcomingBookings({ items: apiItems }){
-  const today = new Date();
-  const items = apiItems && apiItems.length > 0
-    ? apiItems.map(b => {
-        const d = new Date(b.travel_date);
-        const diff = Math.ceil((d - today) / 86400000);
-        const status = diff === 0 ? 'today' : diff === 1 ? 'tomorrow' : `in ${diff}d`;
-        return { n: b.customer_name, pkg: b.package_name, d: d.toLocaleDateString('en-MY',{day:'2-digit',month:'short'}), pax: b.pax, status, img: b.img_class || 'ph-langkawi' };
-      })
-    : [
-        {n:'Nur Aisyah Rahman', pkg:'Langkawi 4D3N', d:'22 Jun', pax:2, status:'today',    img:'ph-langkawi'},
-        {n:'Daniel Lee',        pkg:'Cameron 3D2N',  d:'24 Jun', pax:4, status:'tomorrow', img:'ph-cameron'},
-        {n:'Siti Khadijah',     pkg:'Kundasang 5D4N',d:'26 Jun', pax:6, status:'in 5d',    img:'ph-kundasang'},
-      ];
-  const sc = {'today':'var(--coral)', 'tomorrow':'var(--gold)'};
-  const getColor = s => sc[s] || 'var(--blue-500)';
+function UpcomingBookings(){
+  const items = [
+    {n:'Nur Aisyah Rahman', pkg:'Langkawi 4D3N',     d:'22 May · 06:50',  pax:2, status:'today',    img:'ph-langkawi'},
+    {n:'Daniel Lee',        pkg:'Cameron 3D2N',      d:'24 May · 08:30',  pax:4, status:'tomorrow', img:'ph-cameron'},
+    {n:'Siti Khadijah',     pkg:'Kundasang 5D4N',    d:'26 May · 07:15',  pax:6, status:'in 5d',    img:'ph-kundasang'},
+    {n:'Ahmad Firdaus',     pkg:'Redang 4D3N',       d:'27 May · 09:00',  pax:2, status:'in 6d',    img:'ph-redang'},
+    {n:'Muhammad Amir',     pkg:'Penang 3D2N',       d:'28 May · 06:30',  pax:3, status:'in 7d',    img:'ph-penang'},
+  ];
+  const sc = {today:'var(--coral)', tomorrow:'var(--gold)', 'in 5d':'var(--blue-500)', 'in 6d':'var(--blue-500)', 'in 7d':'var(--blue-500)'};
   return (
     <div style={{padding:'22px 22px', background:'#fff', border:'1px solid var(--line)', borderRadius:16}}>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'start', marginBottom:14}}>
         <div>
           <div className="kicker">UPCOMING · 7 DAYS</div>
-          <div style={{fontFamily:'var(--f-display)', fontSize:22, color:'var(--navy-800)', marginTop:6}}>{items.length} departures</div>
+          <div style={{fontFamily:'var(--f-display)', fontSize:22, color:'var(--navy-800)', marginTop:6}}>5 departures</div>
         </div>
         <button style={{background:'none', border:0, color:'var(--blue-600)', fontSize:12, fontWeight:500, cursor:'pointer'}}>View all →</button>
       </div>
@@ -174,10 +143,9 @@ function UpcomingBookings({ items: apiItems }){
                 <span>{b.pkg}</span><span>·</span><span>{b.d}</span><span>·</span><span>{b.pax}pax</span>
               </div>
             </div>
-            <span style={{padding:'3px 9px', background:getColor(b.status)+'1a', color:getColor(b.status), fontSize:10.5, fontWeight:600, borderRadius:99}}>{b.status.toUpperCase()}</span>
+            <span style={{padding:'3px 9px', background:sc[b.status]+'1a', color:sc[b.status], fontSize:10.5, fontWeight:600, borderRadius:99}}>{b.status.toUpperCase()}</span>
           </div>
         ))}
-        {items.length === 0 && <div style={{textAlign:'center', padding:20, color:'var(--ink-400)', fontSize:13}}>No upcoming departures.</div>}
       </div>
     </div>
   );
@@ -231,18 +199,14 @@ function CalendarCard(){
   );
 }
 
-function TopPackages({ items: apiItems }){
-  const fallback = [
-    {n:'Langkawi 4D3N',  v:'RM 86,200', p:.92},
-    {n:'Kundasang 5D4N', v:'RM 64,800', p:.74},
-    {n:'Cameron 3D2N',   v:'RM 42,400', p:.52},
-    {n:'Redang 4D3N',    v:'RM 38,920', p:.46},
-    {n:'Penang 3D2N',    v:'RM 28,100', p:.34},
+function TopPackages(){
+  const items = [
+    {n:'Langkawi 4D3N',   v:'RM 86,200', p:.92, c:'var(--blue-500)'},
+    {n:'Kundasang 5D4N',  v:'RM 64,800', p:.74, c:'var(--blue-500)'},
+    {n:'Cameron 3D2N',    v:'RM 42,400', p:.52, c:'var(--blue-500)'},
+    {n:'Redang 4D3N',     v:'RM 38,920', p:.46, c:'var(--blue-500)'},
+    {n:'Penang 3D2N',     v:'RM 28,100', p:.34, c:'var(--blue-500)'},
   ];
-  const maxRev = apiItems && apiItems.length > 0 ? Math.max(...apiItems.map(i=>i.revenue)) : 1;
-  const items = apiItems && apiItems.length > 0
-    ? apiItems.map(i => ({ n: i.name, v: `RM ${Math.round(i.revenue).toLocaleString()}`, p: i.revenue / maxRev }))
-    : fallback;
   return (
     <div style={{padding:'22px 22px', background:'#fff', border:'1px solid var(--line)', borderRadius:16}}>
       <div className="kicker">TOP PACKAGES · MTD</div>
@@ -255,7 +219,7 @@ function TopPackages({ items: apiItems }){
               <span className="mono" style={{color:'var(--ink-500)'}}>{p.v}</span>
             </div>
             <div style={{height:6, background:'var(--line-2)', borderRadius:6, overflow:'hidden'}}>
-              <div style={{height:'100%', width:`${p.p*100}%`, background:'var(--blue-500)', borderRadius:6}}/>
+              <div style={{height:'100%', width:`${p.p*100}%`, background:p.c, borderRadius:6}}/>
             </div>
           </div>
         ))}
@@ -264,22 +228,14 @@ function TopPackages({ items: apiItems }){
   );
 }
 
-function ActivityFeed({ items: apiItems }){
-  const typeColor = { booking:'var(--blue-500)', refund:'var(--coral)', alert:'var(--gold)', info:'var(--ink-400)', review:'var(--gold)', promo:'var(--jade)', system:'var(--ink-400)' };
-  const fallback = [
-    {who:'Nur Aisyah',    v:'booked Langkawi 4D3N', t:'2m',  c:'var(--blue-500)'},
-    {who:'Daniel Lee',    v:'paid RM 3,776',         t:'8m',  c:'var(--jade)'},
-    {who:'Siti Khadijah', v:'left a 5★ review',      t:'24m', c:'var(--gold)'},
-    {who:'Muhammad Amir', v:'requested refund',      t:'1h',  c:'var(--coral)'},
+function ActivityFeed(){
+  const items = [
+    {who:'Nur Aisyah',     v:'booked Langkawi 4D3N', t:'2m', c:'var(--blue-500)'},
+    {who:'Daniel Lee',     v:'paid RM 3,776',         t:'8m', c:'var(--jade)'},
+    {who:'Siti Khadijah',  v:'left a 5★ review',      t:'24m',c:'var(--gold)'},
+    {who:'Muhammad Amir',  v:'requested refund',     t:'1h', c:'var(--coral)'},
+    {who:'Ahmad Firdaus',  v:'updated promo MERDEKA32',t:'2h',c:'var(--ink-400)'},
   ];
-  const items = apiItems && apiItems.length > 0
-    ? apiItems.slice(0, 5).map(n => ({
-        who: n.title,
-        v:   n.message.length > 60 ? n.message.slice(0,57)+'…' : n.message,
-        t:   new Date(n.created_at).toLocaleDateString('en-MY',{day:'2-digit',month:'short'}),
-        c:   typeColor[n.type] || 'var(--ink-400)',
-      }))
-    : fallback;
   return (
     <div style={{padding:'22px 22px', background:'#fff', border:'1px solid var(--line)', borderRadius:16}}>
       <div className="kicker">ACTIVITY · LIVE</div>
@@ -297,24 +253,14 @@ function ActivityFeed({ items: apiItems }){
   );
 }
 
-function BookingsTablePreview({ rows: apiRows }){
-  const fallback = [
-    {ref:'VK-2026-04218', n:'Nur Aisyah Rahman', pkg:'Langkawi Island Escape', amt:2716,  s:'Confirmed', p:'Paid'},
-    {ref:'VK-2026-04217', n:'Daniel Lee',        pkg:'Cameron Tea Country',     amt:3776,  s:'Confirmed', p:'Paid'},
-    {ref:'VK-2026-04216', n:'Siti Khadijah',     pkg:'Kundasang Retreat',       amt:12960, s:'Pending',   p:'Deposit'},
-    {ref:'VK-2026-04215', n:'Muhammad Amir',     pkg:'Pulau Redang Marine',     amt:3478,  s:'Refund',    p:'Refunding'},
-    {ref:'VK-2026-04214', n:'Ahmad Firdaus',     pkg:'Penang Heritage & Food',  amt:2160,  s:'Confirmed', p:'Paid'},
+function BookingsTablePreview(){
+  const rows = [
+    {ref:'VK-26-04218', n:'Nur Aisyah Rahman',  pkg:'Langkawi 4D3N',     amt:2716, s:'Confirmed', p:'Paid'},
+    {ref:'VK-26-04217', n:'Daniel Lee',         pkg:'Cameron 3D2N',      amt:3776, s:'Confirmed', p:'Paid'},
+    {ref:'VK-26-04216', n:'Siti Khadijah',      pkg:'Kundasang 5D4N',    amt:12960,s:'Pending',   p:'Deposit'},
+    {ref:'VK-26-04215', n:'Muhammad Amir',      pkg:'Redang 4D3N',       amt:3478, s:'Refund',    p:'Refunding'},
+    {ref:'VK-26-04214', n:'Ahmad Firdaus',      pkg:'Penang 3D2N',       amt:1526, s:'Confirmed', p:'Paid'},
   ];
-  const rows = apiRows && apiRows.length > 0
-    ? apiRows.map(r => ({
-        ref: r.ref,
-        n:   r.customer_name,
-        pkg: r.package_name || r.package_id || '—',
-        amt: r.amount,
-        s:   r.status,
-        p:   r.payment_status,
-      }))
-    : fallback;
   const sc = {Confirmed:{fg:'var(--jade)', bg:'rgba(31,138,91,.10)'}, Pending:{fg:'var(--coral)', bg:'var(--coral-soft)'}, Refund:{fg:'var(--rose)', bg:'rgba(200,83,110,.10)'}};
   return (
     <div style={{padding:'22px 22px', background:'#fff', border:'1px solid var(--line)', borderRadius:16}}>
@@ -385,4 +331,4 @@ function CustomerBreakdown(){
   );
 }
 
-Object.assign(window, { AdminDashboard, useDashboard });
+Object.assign(window, { AdminDashboard });

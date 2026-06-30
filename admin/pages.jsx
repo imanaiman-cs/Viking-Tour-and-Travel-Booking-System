@@ -1,42 +1,23 @@
 // Admin — Reservations management, Packages management, Notifications, Settings
 
-function useReservations() {
-  const [data, setData]     = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
-  const reload = React.useCallback(() => {
-    setLoading(true);
-    fetch('/api/reservations.php')
-      .then(r => r.json())
-      .then(rows => {
-        if (Array.isArray(rows)) {
-          setData(rows.map(r => ({
-            ...r,
-            n:    r.customer_name,
-            ic:   r.customer_ic,
-            ph:   r.customer_phone,
-            pkg:  r.package_name || r.package_id,
-            pax:  r.pax,
-            date: r.travel_date ? new Date(r.travel_date).toLocaleDateString('en-MY', {day:'2-digit',month:'short',year:'numeric'}) : '—',
-            amt:  r.amount,
-            s:    r.status,
-            p:    r.payment_status,
-            ch:   r.payment_channel || '—',
-          })));
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-  React.useEffect(() => { reload(); }, [reload]);
-  return { data, loading, reload };
-}
+const RESERVATIONS = [
+  {ref:'VK-2026-04218', n:'Nur Aisyah Rahman',  ic:'990408-14-5238', ph:'+60 12-345 6789', pkg:'Langkawi Island Escape',    pax:2, date:'18 Jun 2026', amt:2716,  s:'Confirmed', p:'Paid',     ch:'FPX'},
+  {ref:'VK-2026-04217', n:'Daniel Lee',         ic:'870921-08-5172', ph:'+60 16-742 1109', pkg:'Cameron Highlands Tour',    pax:4, date:'03 Jul 2026', amt:3776,  s:'Confirmed', p:'Paid',     ch:'Card'},
+  {ref:'VK-2026-04216', n:'Siti Khadijah',      ic:'940522-12-6634', ph:'+60 19-228 4012', pkg:'Sabah Kundasang Trip',      pax:6, date:'12 Aug 2026', amt:12960, s:'Pending',   p:'Deposit',  ch:'GrabPay'},
+  {ref:'VK-2026-04215', n:'Muhammad Amir',      ic:'910311-05-7281', ph:'+60 13-991 8842', pkg:'Pulau Redang Vacation',     pax:2, date:'22 Jul 2026', amt:3478,  s:'Refund',    p:'Refunding',ch:'FPX'},
+  {ref:'VK-2026-04214', n:'Ahmad Firdaus',      ic:'880715-14-5511', ph:'+60 17-562 0934', pkg:'Penang Heritage & Food',    pax:3, date:'29 Jun 2026', amt:2160,  s:'Confirmed', p:'Paid',     ch:'TnG'},
+  {ref:'VK-2026-04213', n:'Lim Wei Ling',       ic:'960428-07-8923', ph:'+60 12-883 4471', pkg:'Melaka Strait Heritage',    pax:2, date:'14 Jun 2026', amt:1018,  s:'Confirmed', p:'Paid',     ch:'FPX'},
+  {ref:'VK-2026-04212', n:'Tengku Iskandar',    ic:'900919-03-6612', ph:'+60 11-1928 5523',pkg:'Langkawi Island Escape',    pax:4, date:'30 Jun 2026', amt:5432,  s:'Confirmed', p:'Paid',     ch:'Card'},
+  {ref:'VK-2026-04211', n:'Vanitha Subramaniam',ic:'940204-10-4438', ph:'+60 14-228 7710', pkg:'Cameron Highlands Tour',    pax:2, date:'08 Jul 2026', amt:1888,  s:'Pending',   p:'Unpaid',   ch:'—'},
+  {ref:'VK-2026-04210', n:'Wong Mei Ling',      ic:'920708-08-3329', ph:'+60 12-661 4488', pkg:'Pulau Redang Vacation',     pax:2, date:'05 Jul 2026', amt:3478,  s:'Confirmed', p:'Paid',     ch:'Boost'},
+  {ref:'VK-2026-04209', n:'Raj Kumar',          ic:'891003-14-7123', ph:'+60 19-455 8821', pkg:'Sabah Kundasang Trip',      pax:3, date:'18 Aug 2026', amt:6480,  s:'Confirmed', p:'Paid',     ch:'CIMB'},
+];
 
 function AdminReservations(){
   const [q, setQ] = React.useState('');
   const [filter, setFilter] = React.useState('All');
   const [sel, setSel] = React.useState([]);
   const [modal, setModal] = React.useState(null);
-  const { data: RESERVATIONS, loading, reload } = useReservations();
 
   const filtered = RESERVATIONS.filter(r =>
     (filter==='All' || r.s===filter) &&
@@ -463,4 +444,4 @@ function AdminNotifications(){
   );
 }
 
-Object.assign(window, { AdminReservations, AdminPackages, AdminNotifications, BookingModal, useReservations });
+Object.assign(window, { AdminReservations, AdminPackages, AdminNotifications, BookingModal });

@@ -1,23 +1,6 @@
 // Customer site — header, footer, router scaffold
 // Uses hash routing (#/page) so refreshes keep state.
 
-function useCustomerUser() {
-  const [user, setUser] = React.useState(window.__vikingUser || null);
-  React.useEffect(() => {
-    if (window.__vikingUser) { setUser(window.__vikingUser); return; }
-    fetch('/api/auth.php')
-      .then(r => r.json())
-      .then(d => {
-        if (d.loggedIn && d.user) {
-          window.__vikingUser = d.user;
-          setUser(d.user);
-        }
-      })
-      .catch(() => {});
-  }, []);
-  return user;
-}
-
 const ROUTES = [
   {id:'home',     label:'Home',            path:'#/'},
   {id:'packages', label:'Travel Packages', path:'#/packages'},
@@ -51,7 +34,6 @@ function Header({activeId, onSearchOpen}){
   const [openBell, setOpenBell] = React.useState(false);
   const [openUser, setOpenUser] = React.useState(false);
   const [openMobile, setOpenMobile] = React.useState(false);
-  const user = useCustomerUser();
   React.useEffect(()=>{
     const f = ()=> setScrolled(window.scrollY > 12);
     f(); window.addEventListener('scroll', f);
@@ -117,17 +99,15 @@ function Header({activeId, onSearchOpen}){
                 background:'#fff', border:'1px solid var(--line)', cursor:'pointer',
                 fontFamily:'inherit', fontSize:13, color:'var(--ink-700)'
               }}>
-              <span style={{fontWeight:500}} data-hide-on-mobile>
-                {user ? user.name.split(' ')[0] : 'Account'}
-              </span>
+              <span style={{fontWeight:500}} data-hide-on-mobile>Nur Aisyah</span>
               <span style={{
                 width:30, height:30, borderRadius:99,
                 background:'linear-gradient(135deg, var(--navy-700), var(--blue-500))',
                 color:'#fff', display:'grid', placeItems:'center',
                 fontSize:11, fontWeight:600, letterSpacing:.4,
-              }}>{user ? user.name.split(' ').map(x=>x[0]).slice(0,2).join('') : '?'}</span>
+              }}>NA</span>
             </button>
-            {openUser && <UserPopover user={user}/>}
+            {openUser && <UserPopover/>}
           </div>
           <button data-show-on-mobile style={{...iconBtn, display:'none'}} onClick={()=>setOpenMobile(true)} aria-label="Menu">
             <Icon name="menu" size={20}/>
@@ -189,17 +169,13 @@ function NotifPopover(){
   );
 }
 
-function UserPopover({ user }){
+function UserPopover(){
   const items = [
-    {ic:'user',     label:'My profile',  sub:'Personal details',      to:'#/settings'},
-    {ic:'cal',      label:'My bookings', sub:'Upcoming trips',         to:'#/reservations'},
-    {ic:'tag',      label:'Promotions',  sub:'Active promos',          to:'#/promotions'},
-    {ic:'settings', label:'Settings',    sub:'Preferences & privacy',  to:'#/settings'},
+    {ic:'user',     label:'My profile',     sub:'Personal details',         to:'#/settings'},
+    {ic:'cal',      label:'My bookings',    sub:'3 upcoming trips',         to:'#/reservations'},
+    {ic:'tag',      label:'Saved promos',   sub:'2 active',                  to:'#/promotions'},
+    {ic:'settings', label:'Settings',       sub:'Preferences & privacy',    to:'#/settings'},
   ];
-  const handleLogout = () => {
-    fetch('/api/auth.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'logout'})})
-      .finally(() => { window.__vikingUser = null; window.location.href = 'auth.php'; });
-  };
   return (
     <div style={{
       position:'absolute', top:'calc(100% + 8px)', right:0, width:280,
@@ -212,10 +188,10 @@ function UserPopover({ user }){
           background:'linear-gradient(135deg, var(--navy-700), var(--blue-500))',
           color:'#fff', display:'grid', placeItems:'center',
           fontSize:13, fontWeight:600
-        }}>{user ? user.name.split(' ').map(x=>x[0]).slice(0,2).join('') : '?'}</div>
+        }}>NA</div>
         <div>
-          <div style={{fontWeight:600, fontSize:14, color:'var(--ink-900)'}}>{user?.name || 'Guest'}</div>
-          <div style={{fontSize:12, color:'var(--ink-400)'}}>{user?.email || ''}</div>
+          <div style={{fontWeight:600, fontSize:14, color:'var(--ink-900)'}}>Nur Aisyah Rahman</div>
+          <div style={{fontSize:12, color:'var(--ink-400)'}}>aisyah.r@gmail.com</div>
         </div>
       </div>
       <div style={{height:1, background:'var(--line-2)', margin:'0 4px 4px'}}/>
@@ -235,7 +211,7 @@ function UserPopover({ user }){
         </a>
       ))}
       <div style={{height:1, background:'var(--line-2)', margin:'4px 4px'}}/>
-      <button onClick={handleLogout} style={{
+      <button style={{
         display:'flex', alignItems:'center', gap:12, padding:'9px 10px',
         width:'100%', background:'transparent', border:'none', borderRadius:8,
         cursor:'pointer', textAlign:'left', color:'var(--coral)', fontWeight:500, fontSize:13.5,
@@ -419,4 +395,4 @@ function FooterCol({title, items}){
   );
 }
 
-Object.assign(window, { Header, Footer, useHashRoute, useCustomerUser, nav, btnPrimary, btnGhost, btnAccent, iconBtn, ROUTES });
+Object.assign(window, { Header, Footer, useHashRoute, nav, btnPrimary, btnGhost, btnAccent, iconBtn, ROUTES });
