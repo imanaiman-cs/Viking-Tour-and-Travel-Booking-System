@@ -211,7 +211,7 @@ function UserPopover(){
         </a>
       ))}
       <div style={{height:1, background:'var(--line-2)', margin:'4px 4px'}}/>
-      <button style={{
+      <button onClick={()=>window.location.href='auth.php'} style={{
         display:'flex', alignItems:'center', gap:12, padding:'9px 10px',
         width:'100%', background:'transparent', border:'none', borderRadius:8,
         cursor:'pointer', textAlign:'left', color:'var(--coral)', fontWeight:500, fontSize:13.5,

@@ -186,7 +186,7 @@ function UserPopover(){
         </button>
       ))}
       <div style={{height:1, background:'var(--line-2)', margin:'4px 4px'}}/>
-      <button style={{display:'flex', alignItems:'center', gap:10, padding:'9px 12px', width:'100%', background:'transparent', border:0, borderRadius:7, cursor:'pointer', textAlign:'left', fontSize:13, fontFamily:'inherit', color:'var(--coral)'}}>
+      <button onClick={()=>window.location.href='auth.php#admin'} style={{display:'flex', alignItems:'center', gap:10, padding:'9px 12px', width:'100%', background:'transparent', border:0, borderRadius:7, cursor:'pointer', textAlign:'left', fontSize:13, fontFamily:'inherit', color:'var(--coral)'}}>
         <Icon name="logout" size={15}/> Log out
       </button>
     </div>
