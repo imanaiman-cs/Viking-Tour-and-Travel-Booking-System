@@ -246,7 +246,6 @@ function PromotionsPage(){
           </h1>
         </div>
         <div style={{position:'relative'}}>
-          <Icon name="search" size={16} color="var(--ink-400)"/>
           <input placeholder="Search promos by code or destination…" style={{
             width:'100%', padding:'14px 16px 14px 44px',
             background:'#fff', border:'1px solid var(--line)', borderRadius:99,
