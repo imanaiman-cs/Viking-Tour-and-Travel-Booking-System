@@ -73,6 +73,7 @@ function RevenueChart(){
     {m:'Mar', r:236, b:98}, {m:'Apr', r:268, b:112},{m:'May', r:286, b:118},
   ];
   const max = Math.max(...data.map(d=>d.r));
+  const maxB = Math.max(...data.map(d=>d.b));
   return (
     <div style={{padding:'22px 24px', background:'#fff', border:'1px solid var(--line)', borderRadius:16}}>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'start', marginBottom:18}}>
@@ -100,7 +101,7 @@ function RevenueChart(){
           {data.map((d,i)=>{
             const x = 50 + i*55;
             const h = (d.r / max) * 200;
-            const bh = (d.b / max) * 200 * 0.6;
+            const bh = (d.b / maxB) * 200 * 0.6;
             return (
               <g key={i}>
                 <rect x={x} y={240-h-10} width="22" height={h} rx="4" fill="var(--blue-500)" opacity={i===data.length-1 ? 1 : .85}/>
