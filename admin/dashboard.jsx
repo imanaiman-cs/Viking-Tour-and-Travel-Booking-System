@@ -89,24 +89,24 @@ function RevenueChart(){
           </select>
         </div>
       </div>
-      <div style={{position:'relative', height:240}}>
-        <svg viewBox="0 0 720 240" preserveAspectRatio="none" style={{width:'100%', height:'100%'}}>
+      <div style={{position:'relative', height:260}}>
+        <svg viewBox="0 0 720 260" preserveAspectRatio="none" style={{width:'100%', height:'100%'}}>
           {[0.25,0.5,0.75,1].map((p,i)=>(
             <g key={i}>
-              <line x1="40" x2="710" y1={240-p*200-10} y2={240-p*200-10} stroke="var(--line-2)" strokeDasharray="3 4"/>
-              <text x="34" y={240-p*200-7} textAnchor="end" fontSize="10" fill="var(--ink-400)" fontFamily="var(--f-mono)">{Math.round(p*max)}</text>
+              <line x1="40" x2="710" y1={220-p*190-10} y2={220-p*190-10} stroke="var(--line-2)" strokeDasharray="3 4"/>
+              <text x="34" y={220-p*190-7} textAnchor="end" fontSize="10" fill="var(--ink-400)" fontFamily="var(--f-mono)">{Math.round(p*max)}</text>
             </g>
           ))}
           {/* Bars */}
           {data.map((d,i)=>{
             const x = 50 + i*55;
-            const h = (d.r / max) * 200;
-            const bh = (d.b / maxB) * 200 * 0.6;
+            const h = (d.r / max) * 190;
+            const bh = (d.b / maxB) * 190 * 0.6;
             return (
               <g key={i}>
-                <rect x={x} y={240-h-10} width="22" height={h} rx="4" fill="var(--blue-500)" opacity={i===data.length-1 ? 1 : .85}/>
-                <rect x={x+24} y={240-bh-10} width="14" height={bh} rx="3" fill="var(--coral)" opacity=".9"/>
-                <text x={x+18} y="234" textAnchor="middle" fontSize="10" fill="var(--ink-400)" fontFamily="var(--f-mono)">{d.m}</text>
+                <rect x={x} y={210-h} width="22" height={h} rx="4" fill="var(--blue-500)" opacity={i===data.length-1 ? 1 : .85}/>
+                <rect x={x+24} y={210-bh} width="14" height={bh} rx="3" fill="var(--coral)" opacity=".9"/>
+                <text x={x+18} y="248" textAnchor="middle" fontSize="10" fill="var(--ink-400)" fontFamily="var(--f-mono)">{d.m}</text>
               </g>
             );
           })}
