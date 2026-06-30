@@ -1,11 +1,3 @@
-<?php
-/**
- * Viking Tour & Travel — Customer Site
- * Public-facing pages: Home, Packages, Package Detail, Reservation Flow,
- * My Reservations, Promotions, About, Contact, Account Settings.
- * Hash-routed single-page app powered by React + Babel.
- */
-?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -38,7 +30,9 @@
 <body>
 <div id="root"></div>
 
-<?php include 'includes/react-cdn.php'; ?>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <script src="destination-images.js"></script>
 
 <script type="text/babel" src="brand.jsx"></script>
