@@ -52,7 +52,6 @@ function PackagesPage(){
 
             <div className="kicker" style={{marginBottom:10}}>SEARCH</div>
             <div style={{position:'relative', marginBottom:24}}>
-              <Icon name="search" size={15} color="var(--ink-400)"/>
               <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Langkawi, Kundasang…"
                 style={{
                   width:'100%', padding:'10px 14px 10px 36px',
