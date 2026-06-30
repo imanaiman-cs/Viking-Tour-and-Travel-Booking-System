@@ -1,23 +1,104 @@
-// Customer — Reservation / Booking flow (multi-step)
+// Customer — Reservation / Booking flow (multi-step, live API)
 
 function ReservationPage({id}){
-  const pkg = PACKAGES.find(p => p.id===id) || PACKAGES[0];
+  const [pkg, setPkg]   = React.useState(null);
   const [step, setStep] = React.useState(1);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [bookingRef, setBookingRef] = React.useState('');
+  const [error, setError] = React.useState('');
+
+  const user = window.__vikingUser || {};
+  const nameParts = (user.name||'').split(' ');
+
   const [form, setForm] = React.useState({
-    firstName:'Nur Aisyah', lastName:'Rahman',
-    ic:'990408-14-5238', phone:'+60 12-345 6789',
-    email:'aisyah.r@gmail.com', addr:'A-12-3, Residensi Tropika, Jalan Pjs 8/5',
-    city:'Petaling Jaya', poskod:'46150',
-    pax:2, date:'18 Jun 2026', special:'',
+    firstName: nameParts[0] || '',
+    lastName:  nameParts.slice(1).join(' ') || '',
+    ic:        user.ic   || '',
+    phone:     user.phone || '',
+    email:     user.email || '',
+    addr:'', city:'', poskod:'',
+    pax:1,
+    date: '',
+    special:'',
     pay:'fpx', bank:'Maybank2u',
-    card:'•••• 4218', name:'NUR AISYAH RAHMAN',
+    promoCode:'', promoSaved:0,
   });
 
+  React.useEffect(()=>{
+    fetch(`/api/packages.php?id=${encodeURIComponent(id)}`)
+      .then(r=>r.json())
+      .then(data=>{
+        if (data && data.id) {
+          setPkg({
+            ...data,
+            loc:  data.location,
+            img:  data.img_class,
+            was:  data.original_price,
+            days: `${data.days} days ${data.nights} nights`,
+          });
+        }
+      })
+      .catch(()=>{});
+  },[id]);
+
   const steps = ['Traveller details','Add-ons','Payment','Confirm'];
-  const subtotal = pkg.price * form.pax;
-  const tax = Math.round(subtotal * 0.06);
-  const disc = (pkg.was-pkg.price) * form.pax;
-  const total = subtotal + tax;
+  const subtotal = pkg ? pkg.price * form.pax : 0;
+  const tax      = Math.round(subtotal * 0.06);
+  const disc     = form.promoSaved;
+  const total    = subtotal + tax - disc;
+
+  function genRef(){
+    const y = new Date().getFullYear();
+    const n = String(Math.floor(10000 + Math.random()*90000));
+    return `VK-${y}-${n}`;
+  }
+
+  async function handleConfirmPay(){
+    if (!pkg) return;
+    setSubmitting(true);
+    setError('');
+    const ref = genRef();
+    const travelDate = form.date || new Date().toISOString().slice(0,10);
+    const payload = {
+      ref,
+      user_id:          user.id || null,
+      package_id:       pkg.id,
+      customer_name:    `${form.firstName} ${form.lastName}`.trim(),
+      customer_ic:      form.ic,
+      customer_phone:   form.phone,
+      pax:              Number(form.pax),
+      travel_date:      travelDate,
+      amount:           total,
+      status:           'Confirmed',
+      payment_status:   'Paid',
+      payment_channel:  form.pay,
+      special_requests: form.special,
+    };
+    try {
+      const res = await fetch('/api/reservations.php', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success || data.id) {
+        setBookingRef(ref);
+        setStep(4);
+      } else {
+        setError(data.error || 'Booking failed. Please try again.');
+      }
+    } catch(e){
+      setError('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (!pkg) return (
+    <main style={{maxWidth:1320, margin:'80px auto', padding:'0 32px', textAlign:'center', color:'var(--ink-400)'}}>
+      Loading package…
+    </main>
+  );
 
   return (
     <main style={{maxWidth:1320, margin:'0 auto', padding:'36px 32px 0'}}>
@@ -57,18 +138,32 @@ function ReservationPage({id}){
           {step===1 && <StepDetails form={form} setForm={setForm}/>}
           {step===2 && <StepAddons/>}
           {step===3 && <StepPayment form={form} setForm={setForm} total={total} disc={disc}/>}
-          {step===4 && <StepConfirm form={form} pkg={pkg} total={total}/>}
+          {step===4 && <StepConfirm form={form} pkg={pkg} total={total} bookingRef={bookingRef}/>}
+
+          {error && (
+            <div style={{marginTop:16, padding:'12px 16px', background:'var(--coral-soft)', border:'1px solid var(--coral)', borderRadius:10, color:'var(--coral)', fontSize:13}}>
+              {error}
+            </div>
+          )}
 
           <div style={{display:'flex', justifyContent:'space-between', marginTop:36}}>
-            <button style={btnGhost} onClick={()=> step>1 ? setStep(step-1) : nav('#/package/'+id)}>
-              <Icon name="arrow-l" size={14}/> {step>1 ? 'Previous' : 'Back to package'}
-            </button>
-            {step < 4 ? (
-              <button style={btnPrimary} onClick={()=>setStep(step+1)}>
-                {step===3 ? 'Confirm & pay' : 'Continue'} <Icon name="arrow-r" size={14}/>
+            {step < 4 && (
+              <button style={btnGhost} onClick={()=> step>1 ? setStep(step-1) : nav('#/package/'+id)}>
+                <Icon name="arrow-l" size={14}/> {step>1 ? 'Previous' : 'Back to package'}
               </button>
-            ) : (
-              <button style={btnAccent} onClick={()=>nav('#/')}>Done · view itinerary</button>
+            )}
+            {step < 3 && (
+              <button style={btnPrimary} onClick={()=>setStep(step+1)}>
+                Continue <Icon name="arrow-r" size={14}/>
+              </button>
+            )}
+            {step===3 && (
+              <button style={{...btnAccent, opacity: submitting ? .6 : 1}} onClick={handleConfirmPay} disabled={submitting}>
+                {submitting ? 'Processing…' : 'Confirm & pay'} <Icon name="arrow-r" size={14}/>
+              </button>
+            )}
+            {step===4 && (
+              <button style={btnPrimary} onClick={()=>nav('#/reservations')}>View my reservations</button>
             )}
           </div>
         </div>
@@ -84,26 +179,26 @@ function ReservationPage({id}){
               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, fontSize:12.5, marginBottom:16}}>
                 <div style={{padding:'10px 12px', background:'var(--paper)', borderRadius:10}}>
                   <div className="kicker">DEPART</div>
-                  <div style={{fontWeight:500, marginTop:2}}>{form.date}</div>
+                  <div style={{fontWeight:500, marginTop:2}}>{form.date ? new Date(form.date).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '—'}</div>
                 </div>
                 <div style={{padding:'10px 12px', background:'var(--paper)', borderRadius:10}}>
                   <div className="kicker">PAX</div>
-                  <div style={{fontWeight:500, marginTop:2}}>{form.pax} adults</div>
+                  <div style={{fontWeight:500, marginTop:2}}>{form.pax} adult{form.pax!==1?'s':''}</div>
                 </div>
               </div>
 
               <div className="divider" style={{margin:'2px 0 14px'}}/>
               <Row l={`RM ${pkg.price.toLocaleString()} × ${form.pax}`} v={`RM ${subtotal.toLocaleString()}`}/>
               <Row l="SST (6%)" v={`RM ${tax.toLocaleString()}`}/>
-              <Row l="MERDEKA32" v={`− RM ${disc.toLocaleString()}`} color="var(--coral)"/>
+              {disc > 0 && <Row l={form.promoCode} v={`− RM ${disc.toLocaleString()}`} color="var(--coral)"/>}
               <div className="divider" style={{margin:'10px 0 12px'}}/>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'baseline'}}>
                 <span style={{fontSize:13.5, fontWeight:500}}>Total</span>
-                <span style={{fontFamily:'var(--f-display)', fontSize:28, color:'var(--navy-900)'}}>RM {(total-disc).toLocaleString()}</span>
+                <span style={{fontFamily:'var(--f-display)', fontSize:28, color:'var(--navy-900)'}}>RM {total.toLocaleString()}</span>
               </div>
               <div style={{padding:'10px 12px', background:'var(--blue-50)', borderRadius:10, fontSize:11.5, color:'var(--navy-700)', marginTop:14, display:'flex', gap:8}}>
                 <Icon name="check" size={14} color="var(--jade)"/>
-                Free cancellation up to <strong>11 Jun 2026</strong> · 7 days before departure.
+                Free cancellation up to 7 days before departure.
               </div>
             </div>
           </div>
@@ -145,44 +240,51 @@ function StepDetails({form, setForm}){
     <div style={{display:'flex', flexDirection:'column', gap:22}}>
       <Section title="Lead traveller" subtitle="As shown on your MyKad or passport.">
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14}}>
-          <Field2 label="FIRST NAME" value={form.firstName} onChange={e=>u('firstName',e.target.value)}/>
-          <Field2 label="LAST NAME" value={form.lastName} onChange={e=>u('lastName',e.target.value)}/>
-          <Field2 label="IC NUMBER" value={form.ic} onChange={e=>u('ic',e.target.value)}/>
-          <Field2 label="PHONE" value={form.phone} onChange={e=>u('phone',e.target.value)}/>
-          <Field2 label="EMAIL" value={form.email} onChange={e=>u('email',e.target.value)}/>
-          <Field2 label="ALTERNATE PHONE" value="" onChange={()=>{}} placeholder="Optional"/>
+          <Field2 label="FIRST NAME" value={form.firstName} onChange={e=>u('firstName',e.target.value)} placeholder="e.g. Ahmad"/>
+          <Field2 label="LAST NAME"  value={form.lastName}  onChange={e=>u('lastName',e.target.value)}  placeholder="e.g. bin Abdullah"/>
+          <Field2 label="IC NUMBER"  value={form.ic}        onChange={e=>u('ic',e.target.value)}         placeholder="e.g. 990408-14-5238"/>
+          <Field2 label="PHONE"      value={form.phone}     onChange={e=>u('phone',e.target.value)}      placeholder="e.g. +60 12-345 6789"/>
+          <Field2 label="EMAIL"      value={form.email}     onChange={e=>u('email',e.target.value)}      type="email" placeholder="your@email.com"/>
+          <label style={{display:'block'}}>
+            <div className="kicker" style={{marginBottom:7}}>NUMBER OF PAX</div>
+            <div style={{display:'flex', alignItems:'center', gap:8, padding:'12px 14px', background:'#fff', border:'1px solid var(--line)', borderRadius:10}}>
+              <button onClick={()=>u('pax',Math.max(1,form.pax-1))} style={{width:28,height:28,borderRadius:99,border:'1px solid var(--line)',background:'var(--paper)',cursor:'pointer',fontFamily:'inherit',fontSize:16}}>−</button>
+              <span style={{flex:1, textAlign:'center', fontSize:16, fontWeight:600, color:'var(--navy-800)'}}>{form.pax}</span>
+              <button onClick={()=>u('pax',Math.min(20,form.pax+1))} style={{width:28,height:28,borderRadius:99,border:'1px solid var(--line)',background:'var(--paper)',cursor:'pointer',fontFamily:'inherit',fontSize:16}}>+</button>
+            </div>
+          </label>
         </div>
+      </Section>
+
+      <Section title="Travel date" subtitle="Select your preferred departure date.">
+        <input type="date" value={form.date} onChange={e=>u('date',e.target.value)}
+          min={new Date().toISOString().slice(0,10)}
+          style={{padding:'13px 14px', width:'100%', border:'1px solid var(--line)', borderRadius:10, background:'#fff', fontFamily:'inherit', fontSize:14, color:'var(--ink-900)', boxSizing:'border-box'}}/>
       </Section>
 
       <Section title="Address (for billing)" subtitle="We'll send your e-invoice here.">
         <div style={{display:'grid', gridTemplateColumns:'1fr', gap:14}}>
-          <Field2 label="STREET ADDRESS" value={form.addr} onChange={e=>u('addr',e.target.value)}/>
+          <Field2 label="STREET ADDRESS" value={form.addr}   onChange={e=>u('addr',e.target.value)}   placeholder="e.g. A-12-3, Jalan Pjs 8/5"/>
           <div style={{display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:14}}>
-            <Field2 label="CITY" value={form.city} onChange={e=>u('city',e.target.value)}/>
-            <Field2 label="POSKOD" value={form.poskod} onChange={e=>u('poskod',e.target.value)}/>
+            <Field2 label="CITY"   value={form.city}   onChange={e=>u('city',e.target.value)}   placeholder="e.g. Petaling Jaya"/>
+            <Field2 label="POSKOD" value={form.poskod} onChange={e=>u('poskod',e.target.value)} placeholder="46150"/>
             <label style={{display:'block'}}>
               <div className="kicker" style={{marginBottom:7}}>STATE</div>
               <select style={{padding:'13px 14px', width:'100%', border:'1px solid var(--line)', borderRadius:10, background:'#fff', fontFamily:'inherit', fontSize:14}}>
-                <option>Selangor</option><option>Kuala Lumpur</option><option>Pulau Pinang</option><option>Johor</option>
+                <option>Selangor</option><option>Kuala Lumpur</option><option>Pulau Pinang</option><option>Johor</option><option>Perak</option><option>Kedah</option><option>Kelantan</option><option>Sabah</option><option>Sarawak</option>
               </select>
             </label>
           </div>
         </div>
       </Section>
 
-      <Section title="Other travellers" subtitle="Add names later — required 5 days before departure.">
-        <div style={{padding:'14px 16px', background:'var(--paper)', border:'1px dashed var(--line)', borderRadius:12, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-          <div style={{fontSize:13, color:'var(--ink-500)'}}>1 additional adult · details required by 13 Jun 2026</div>
-          <button style={{...btnGhost, padding:'8px 14px', fontSize:13}}><Icon name="plus" size={14}/> Add traveller</button>
-        </div>
-      </Section>
-
       <Section title="Special requests" subtitle="Dietary, accessibility, room preference — anything we should know.">
-        <textarea placeholder="e.g. No seafood, please. Prefer ground-floor room. Halal meals throughout."
+        <textarea value={form.special} onChange={e=>setForm({...form, special:e.target.value})}
+          placeholder="e.g. No seafood, please. Prefer ground-floor room. Halal meals throughout."
           style={{
             width:'100%', minHeight:90, padding:'14px 16px',
             background:'#fff', border:'1px solid var(--line)', borderRadius:12,
-            fontFamily:'inherit', fontSize:14, color:'var(--ink-900)', resize:'vertical',
+            fontFamily:'inherit', fontSize:14, color:'var(--ink-900)', resize:'vertical', boxSizing:'border-box',
           }}/>
       </Section>
     </div>
@@ -202,24 +304,24 @@ function Section({title, subtitle, children}){
 }
 
 function StepAddons(){
-  const addons = [
-    {id:'ins',  t:'Travel insurance',     d:'AmAssurance domestic plan · medical + trip cancellation', p:48, on:true},
-    {id:'tx',   t:'Premium airport transfer', d:'Toyota Vellfire · meet & greet at LGK', p:120, on:false},
-    {id:'cam',  t:'Drone photography hour',d:'Personal drone shoot at sunset, Day 2',  p:280, on:true},
-    {id:'spa',  t:'Couple spa package',    d:'90-min traditional Malay massage',        p:340, on:false},
-    {id:'wifi', t:'Pocket WiFi',           d:'Unlimited 4G across Malaysia, 4 days',    p:35,  on:false},
-  ];
+  const [addons, setAddons] = React.useState([
+    {id:'ins',  t:'Travel insurance',         d:'AmAssurance domestic plan · medical + trip cancellation', p:48,  on:true},
+    {id:'tx',   t:'Premium airport transfer',  d:'Toyota Vellfire · meet & greet at LGK',                 p:120, on:false},
+    {id:'cam',  t:'Drone photography hour',    d:'Personal drone shoot at sunset, Day 2',                  p:280, on:true},
+    {id:'spa',  t:'Couple spa package',        d:'90-min traditional Malay massage',                       p:340, on:false},
+    {id:'wifi', t:'Pocket WiFi',               d:'Unlimited 4G across Malaysia, 4 days',                   p:35,  on:false},
+  ]);
   return (
     <Section title="Optional add-ons" subtitle="Charged with the trip. You can remove these up to 48 hours before departure.">
       <div style={{display:'flex', flexDirection:'column', gap:10}}>
-        {addons.map(a => (
-          <label key={a.id} style={{
+        {addons.map((a,i) => (
+          <label key={a.id} onClick={()=>{const next=[...addons]; next[i]={...a, on:!a.on}; setAddons(next);}} style={{
             display:'grid', gridTemplateColumns:'auto 1fr auto', gap:16, alignItems:'center',
             padding:'14px 16px', border:'1px solid ' + (a.on ? 'var(--blue-500)':'var(--line)'),
             borderRadius:12, cursor:'pointer',
             background: a.on ? 'var(--blue-50)' : '#fff',
           }}>
-            <input type="checkbox" defaultChecked={a.on} style={{width:18, height:18, accentColor:'var(--blue-500)'}}/>
+            <input type="checkbox" checked={a.on} readOnly style={{width:18, height:18, accentColor:'var(--blue-500)'}}/>
             <div>
               <div style={{fontSize:14, fontWeight:600, color:'var(--ink-900)'}}>{a.t}</div>
               <div style={{fontSize:12.5, color:'var(--ink-500)', marginTop:2}}>{a.d}</div>
@@ -234,12 +336,38 @@ function StepAddons(){
 
 function StepPayment({form, setForm, total, disc}){
   const u = (k,v)=> setForm({...form, [k]:v});
+  const [promoInput, setPromoInput] = React.useState(form.promoCode || '');
+  const [promoErr, setPromoErr]     = React.useState('');
+  const [promoLoading, setPromoLoading] = React.useState(false);
+
+  async function applyPromo(){
+    if (!promoInput.trim()) return;
+    setPromoLoading(true); setPromoErr('');
+    try {
+      const res = await fetch('/api/promotions.php?code=' + encodeURIComponent(promoInput.trim()));
+      const data = await res.json();
+      if (data && data.status==='Active') {
+        const saved = data.type==='percentage'
+          ? Math.round(total * data.value / 100)
+          : Math.min(Number(data.value), total);
+        setForm({...form, promoCode: promoInput.trim(), promoSaved: saved});
+        setPromoErr('');
+      } else {
+        setPromoErr('Invalid or expired promo code.');
+      }
+    } catch(e){
+      setPromoErr('Could not verify code. Try again.');
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
   const methods = [
-    {id:'fpx',     l:'FPX online banking', s:'All Malaysian banks'},
-    {id:'card',    l:'Credit / debit card', s:'Visa · Mastercard'},
-    {id:'grab',    l:'GrabPay',            s:'Pay with your e-wallet'},
-    {id:'tng',     l:"Touch 'n Go eWallet", s:'TnG e-wallet'},
-    {id:'atome',   l:'Atome',              s:'Split into 3 · 0% interest'},
+    {id:'fpx',   l:'FPX online banking',   s:'All Malaysian banks'},
+    {id:'card',  l:'Credit / debit card',  s:'Visa · Mastercard'},
+    {id:'grab',  l:'GrabPay',              s:'Pay with your e-wallet'},
+    {id:'tng',   l:"Touch 'n Go eWallet",  s:'TnG e-wallet'},
+    {id:'atome', l:'Atome',                s:'Split into 3 · 0% interest'},
   ];
   return (
     <div style={{display:'flex', flexDirection:'column', gap:22}}>
@@ -280,31 +408,46 @@ function StepPayment({form, setForm, total, disc}){
         )}
 
         {form.pay==='card' && (
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14}}>
-            <Field2 label="CARD NUMBER" value="4218 •••• •••• ••••" onChange={()=>{}}/>
-            <Field2 label="NAME ON CARD" value={form.name} onChange={e=>u('name', e.target.value)}/>
-            <Field2 label="EXPIRY" value="08 / 28" onChange={()=>{}}/>
-            <Field2 label="CVV" value="•••" onChange={()=>{}}/>
+          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginTop:14}}>
+            <Field2 label="CARD NUMBER" value="" onChange={()=>{}} placeholder="1234 5678 9012 3456"/>
+            <Field2 label="NAME ON CARD" value="" onChange={()=>{}} placeholder="As on card"/>
+            <Field2 label="EXPIRY" value="" onChange={()=>{}} placeholder="MM / YY"/>
+            <Field2 label="CVV" value="" onChange={()=>{}} type="password" placeholder="•••"/>
           </div>
         )}
       </Section>
 
       <Section title="Promo code">
-        <div style={{display:'flex', gap:10}}>
-          <div style={{flex:1, padding:'12px 14px', background:'var(--coral-soft)', border:'1px solid var(--coral)', borderRadius:10, display:'flex', alignItems:'center', gap:10}}>
-            <Icon name="tag" size={16} color="var(--coral)"/>
-            <span style={{fontFamily:'var(--f-mono)', fontSize:13, fontWeight:600, color:'var(--coral)', letterSpacing:'.1em'}}>MERDEKA32</span>
-            <span style={{fontSize:12, color:'var(--ink-500)', marginLeft:'auto'}}>Saved RM {disc.toLocaleString()}</span>
-            <button style={{background:'none', border:0, color:'var(--coral)', fontSize:12, cursor:'pointer'}}>Remove</button>
+        {form.promoCode ? (
+          <div style={{display:'flex', gap:10}}>
+            <div style={{flex:1, padding:'12px 14px', background:'var(--coral-soft)', border:'1px solid var(--coral)', borderRadius:10, display:'flex', alignItems:'center', gap:10}}>
+              <Icon name="tag" size={16} color="var(--coral)"/>
+              <span style={{fontFamily:'var(--f-mono)', fontSize:13, fontWeight:600, color:'var(--coral)', letterSpacing:'.1em'}}>{form.promoCode}</span>
+              <span style={{fontSize:12, color:'var(--ink-500)', marginLeft:'auto'}}>Saved RM {form.promoSaved.toLocaleString()}</span>
+              <button onClick={()=>setForm({...form, promoCode:'', promoSaved:0})} style={{background:'none', border:0, color:'var(--coral)', fontSize:12, cursor:'pointer'}}>Remove</button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{display:'flex', gap:10}}>
+            <div style={{flex:1, padding:'12px 14px', background:'#fff', border:'1px solid var(--line)', borderRadius:10, display:'flex', alignItems:'center', gap:10}}>
+              <Icon name="tag" size={16} color="var(--ink-400)"/>
+              <input value={promoInput} onChange={e=>setPromoInput(e.target.value)}
+                placeholder="Enter promo code"
+                style={{flex:1, background:'transparent', border:0, outline:0, fontFamily:'var(--f-mono)', fontSize:13, color:'var(--ink-900)', letterSpacing:'.08em'}}/>
+            </div>
+            <button style={{...btnPrimary, padding:'12px 20px'}} onClick={applyPromo} disabled={promoLoading}>
+              {promoLoading ? '…' : 'Apply'}
+            </button>
+          </div>
+        )}
+        {promoErr && <div style={{marginTop:8, fontSize:12, color:'var(--coral)'}}>{promoErr}</div>}
       </Section>
 
       <label style={{display:'flex', alignItems:'flex-start', gap:10, padding:'14px 18px', background:'#fff', border:'1px solid var(--line)', borderRadius:12}}>
         <input type="checkbox" defaultChecked style={{accentColor:'var(--blue-500)', marginTop:3}}/>
         <span style={{fontSize:13, color:'var(--ink-500)', lineHeight:1.5}}>
-          I agree to Viking Tour &amp; Travel's <a href="#" style={{color:'var(--blue-600)', fontWeight:500}}>Terms &amp; Conditions</a>,
-          <a href="#" style={{color:'var(--blue-600)', fontWeight:500}}> Privacy Policy</a>, and the package-specific cancellation rules.
+          I agree to Viking Tour &amp; Travel's <a href="#" style={{color:'var(--blue-600)', fontWeight:500}}>Terms &amp; Conditions</a>,{' '}
+          <a href="#" style={{color:'var(--blue-600)', fontWeight:500}}>Privacy Policy</a>, and the package-specific cancellation rules.
           I confirm all travellers' details are accurate.
         </span>
       </label>
@@ -312,7 +455,7 @@ function StepPayment({form, setForm, total, disc}){
   );
 }
 
-function StepConfirm({form, pkg, total}){
+function StepConfirm({form, pkg, total, bookingRef}){
   return (
     <div style={{padding:'40px 40px', background:'#fff', border:'1px solid var(--line)', borderRadius:20, textAlign:'center'}}>
       <div style={{width:72, height:72, borderRadius:99, background:'var(--blue-50)', color:'var(--jade)', margin:'0 auto', display:'grid', placeItems:'center'}}>
@@ -327,7 +470,7 @@ function StepConfirm({form, pkg, total}){
       <div style={{display:'inline-grid', gridTemplateColumns:'auto auto', gap:'12px 36px', marginTop:30, padding:'24px 36px', background:'var(--paper)', borderRadius:14, textAlign:'left'}}>
         <div>
           <div className="kicker">BOOKING REF</div>
-          <div className="mono" style={{fontSize:16, fontWeight:600, color:'var(--navy-900)', marginTop:4, letterSpacing:'.1em'}}>VK-2026-04218</div>
+          <div className="mono" style={{fontSize:16, fontWeight:600, color:'var(--navy-900)', marginTop:4, letterSpacing:'.1em'}}>{bookingRef}</div>
         </div>
         <div>
           <div className="kicker">PACKAGE</div>
@@ -335,7 +478,7 @@ function StepConfirm({form, pkg, total}){
         </div>
         <div>
           <div className="kicker">DEPART</div>
-          <div style={{fontSize:14, fontWeight:500, marginTop:4}}>{form.date} · 06:50 KL</div>
+          <div style={{fontSize:14, fontWeight:500, marginTop:4}}>{form.date ? new Date(form.date).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}) : '—'}</div>
         </div>
         <div>
           <div className="kicker">TOTAL PAID</div>

@@ -2,6 +2,7 @@
 
 function CustomerSettings(){
   const [tab, setTab] = React.useState('profile');
+  const user = window.__vikingUser || {};
   const tabs = [
     {id:'profile',  l:'Profile',           ic:'user'},
     {id:'security', l:'Security',          ic:'settings'},
@@ -26,10 +27,12 @@ function CustomerSettings(){
         <div style={{display:'flex', alignItems:'center', gap:12}}>
           <span className="kicker">SIGNED IN AS</span>
           <div style={{display:'flex', alignItems:'center', gap:10, padding:'7px 12px 7px 7px', background:'#fff', border:'1px solid var(--line)', borderRadius:99}}>
-            <span style={{width:30, height:30, borderRadius:99, background:'linear-gradient(135deg, var(--navy-700), var(--blue-500))', color:'#fff', display:'grid', placeItems:'center', fontSize:11, fontWeight:600}}>NA</span>
+            <span style={{width:30, height:30, borderRadius:99, background:'linear-gradient(135deg, var(--navy-700), var(--blue-500))', color:'#fff', display:'grid', placeItems:'center', fontSize:11, fontWeight:600}}>
+              {(user.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+            </span>
             <div style={{fontSize:13}}>
-              <div style={{fontWeight:600}}>Nur Aisyah Rahman</div>
-              <div style={{fontSize:11, color:'var(--ink-400)'}}>VIP · Gold</div>
+              <div style={{fontWeight:600}}>{user.name || 'Guest'}</div>
+              <div style={{fontSize:11, color:'var(--ink-400)'}}>{user.tier || 'Bronze'}</div>
             </div>
           </div>
         </div>
@@ -112,48 +115,93 @@ function SLbl({label, children, hint}){
 const sInp = {width:'100%', padding:'12px 14px', border:'1px solid var(--line)', borderRadius:10, background:'#fff', fontSize:14, fontFamily:'inherit', color:'var(--ink-900)'};
 
 function CProfile(){
+  const user = window.__vikingUser || {};
+  const nameParts = (user.name||'').split(' ');
+  const [form, setForm] = React.useState({
+    firstName: nameParts[0] || '',
+    lastName:  nameParts.slice(1).join(' ') || '',
+    ic:        user.ic    || '',
+    email:     user.email || '',
+    phone:     user.phone || '',
+    addr:      user.address || '',
+    city:      user.city   || '',
+  });
+  const [saving, setSaving]   = React.useState(false);
+  const [saved, setSaved]     = React.useState(false);
+  const [err, setErr]         = React.useState('');
+  const u = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const initials = [form.firstName[0]||'', form.lastName[0]||''].join('').toUpperCase() || '?';
+
+  async function save(){
+    if (!user.id) return;
+    setSaving(true); setSaved(false); setErr('');
+    try {
+      const res = await fetch(`/api/customers.php?id=${user.id}`, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          first_name: form.firstName,
+          last_name:  form.lastName,
+          phone:      form.phone,
+          email:      form.email,
+          city:       form.city,
+          address:    form.addr,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.__vikingUser = {...user, name:`${form.firstName} ${form.lastName}`, email:form.email, phone:form.phone};
+        setSaved(true);
+      } else {
+        setErr(data.error || 'Failed to save.');
+      }
+    } catch(e){ setErr('Network error. Try again.'); }
+    finally { setSaving(false); }
+  }
+
   return (
     <>
       <SCard title="Personal information" subtitle="As shown on your MyKad / passport. Used on every booking invoice.">
         <div style={{display:'flex', alignItems:'center', gap:18, marginBottom:22}}>
-          <div style={{width:72, height:72, borderRadius:99, background:'linear-gradient(135deg, var(--navy-700), var(--blue-500))', color:'#fff', display:'grid', placeItems:'center', fontFamily:'var(--f-display)', fontSize:28}}>NA</div>
+          <div style={{width:72, height:72, borderRadius:99, background:'linear-gradient(135deg, var(--navy-700), var(--blue-500))', color:'#fff', display:'grid', placeItems:'center', fontFamily:'var(--f-display)', fontSize:28}}>{initials}</div>
           <div>
-            <div style={{fontWeight:600, fontSize:15}}>Nur Aisyah Rahman</div>
-            <div style={{fontSize:12.5, color:'var(--ink-500)', marginTop:2}}>Member since Aug 2023 · 12 lifetime bookings · RM 18,420 spent</div>
-          </div>
-          <div style={{marginLeft:'auto', display:'flex', gap:8}}>
-            <button style={{...btnGhost, padding:'8px 14px', fontSize:12.5}}>Upload photo</button>
-            <button style={{padding:'8px 14px', borderRadius:99, background:'transparent', color:'var(--coral)', border:'1px solid var(--coral-soft)', cursor:'pointer', fontFamily:'inherit', fontWeight:500, fontSize:12.5}}>Remove</button>
+            <div style={{fontWeight:600, fontSize:15}}>{user.name || 'Your Name'}</div>
+            <div style={{fontSize:12.5, color:'var(--ink-500)', marginTop:2}}>{user.tier || 'Bronze'} member</div>
           </div>
         </div>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14}}>
-          <SLbl label="FIRST NAME"><input defaultValue="Nur Aisyah" style={sInp}/></SLbl>
-          <SLbl label="LAST NAME"><input defaultValue="Rahman" style={sInp}/></SLbl>
-          <SLbl label="IC NUMBER"  hint="Cannot be changed — contact support"><input defaultValue="990408-14-5238" disabled style={{...sInp, color:'var(--ink-400)', background:'var(--paper)'}}/></SLbl>
-          <SLbl label="DATE OF BIRTH"><input defaultValue="08 Apr 1999" style={sInp}/></SLbl>
-          <SLbl label="EMAIL"><input defaultValue="aisyah.r@gmail.com" style={sInp}/></SLbl>
-          <SLbl label="PHONE"><input defaultValue="+60 12-345 6789" style={sInp}/></SLbl>
-          <SLbl label="EMERGENCY CONTACT NAME"><input defaultValue="Rahman bin Hassan" style={sInp}/></SLbl>
-          <SLbl label="EMERGENCY CONTACT PHONE"><input defaultValue="+60 13-228 4419" style={sInp}/></SLbl>
+          <SLbl label="FIRST NAME"><input value={form.firstName} onChange={e=>u('firstName',e.target.value)} style={sInp}/></SLbl>
+          <SLbl label="LAST NAME"><input value={form.lastName} onChange={e=>u('lastName',e.target.value)} style={sInp}/></SLbl>
+          <SLbl label="IC NUMBER" hint="Cannot be changed — contact support"><input value={form.ic} disabled style={{...sInp, color:'var(--ink-400)', background:'var(--paper)'}}/></SLbl>
+          <SLbl label="EMAIL"><input value={form.email} onChange={e=>u('email',e.target.value)} type="email" style={sInp}/></SLbl>
+          <SLbl label="PHONE"><input value={form.phone} onChange={e=>u('phone',e.target.value)} style={sInp}/></SLbl>
+        </div>
+        {err  && <div style={{marginTop:12, fontSize:12.5, color:'var(--coral)'}}>{err}</div>}
+        {saved && <div style={{marginTop:12, fontSize:12.5, color:'var(--jade)'}}>Profile saved successfully.</div>}
+        <div style={{display:'flex', gap:8, marginTop:20, justifyContent:'flex-end'}}>
+          <button style={{...btnPrimary, padding:'11px 20px', opacity:saving?.6:1}} onClick={save} disabled={saving}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
         </div>
       </SCard>
 
       <SCard title="Home address" subtitle="Used as the default billing address on new bookings.">
         <div style={{display:'flex', flexDirection:'column', gap:14}}>
-          <SLbl label="STREET ADDRESS"><input defaultValue="A-12-3, Residensi Tropika, Jalan Pjs 8/5" style={sInp}/></SLbl>
+          <SLbl label="STREET ADDRESS"><input value={form.addr} onChange={e=>u('addr',e.target.value)} placeholder="e.g. A-12-3, Jalan Pjs 8/5" style={sInp}/></SLbl>
           <div style={{display:'grid', gridTemplateColumns:'2fr 1fr 1fr', gap:14}}>
-            <SLbl label="CITY"><input defaultValue="Petaling Jaya" style={sInp}/></SLbl>
-            <SLbl label="POSKOD"><input defaultValue="46150" style={sInp}/></SLbl>
+            <SLbl label="CITY"><input value={form.city} onChange={e=>u('city',e.target.value)} placeholder="e.g. Petaling Jaya" style={sInp}/></SLbl>
             <SLbl label="STATE">
-              <select defaultValue="Selangor" style={sInp}>
+              <select style={sInp}>
                 <option>Selangor</option><option>Kuala Lumpur</option><option>Pulau Pinang</option><option>Johor</option><option>Melaka</option>
               </select>
             </SLbl>
           </div>
         </div>
         <div style={{display:'flex', gap:8, marginTop:20, justifyContent:'flex-end'}}>
-          <button style={{...btnGhost, padding:'11px 20px'}}>Cancel</button>
-          <button style={{...btnPrimary, padding:'11px 20px'}}>Save changes</button>
+          <button style={{...btnPrimary, padding:'11px 20px', opacity:saving?.6:1}} onClick={save} disabled={saving}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
         </div>
       </SCard>
     </>
