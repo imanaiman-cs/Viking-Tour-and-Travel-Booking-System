@@ -25,7 +25,6 @@ function AdminShell({active, title, subtitle, children, breadcrumb}){
           </div>
 
           <div style={{position:'relative', maxWidth:360, flex:1}}>
-            <Icon name="search" size={16} color="var(--ink-400)"/>
             <input placeholder="Search bookings, customers, packages…" style={{
               width:'100%', padding:'10px 14px 10px 40px',
               background:'#fff', border:'1px solid var(--line)', borderRadius:99,
